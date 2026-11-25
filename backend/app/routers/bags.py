@@ -31,7 +31,7 @@ def list_bags():
 
 @router.post("/封袋/开袋")
 def open_bag(body: BagOpenIn):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         shift = current_shift(conn)
         chute = conn.execute("SELECT * FROM chutes WHERE id=?", (body.口门编号,)).fetchone()
@@ -51,7 +51,7 @@ def open_bag(body: BagOpenIn):
 
 @router.post("/封袋/{bag_id}/入袋")
 def add_to_bag(bag_id: int, body: BagAddIn):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         bag = conn.execute("SELECT * FROM bags WHERE id=?", (bag_id,)).fetchone()
         if not bag:
@@ -75,7 +75,7 @@ def add_to_bag(bag_id: int, body: BagAddIn):
 
 @router.post("/封袋/{bag_id}/封口")
 def seal_bag(bag_id: int):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         bag = conn.execute("SELECT * FROM bags WHERE id=?", (bag_id,)).fetchone()
         if not bag:

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
+import { useRefreshKey } from '../refresh'
 
 export default function Overview() {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
-  const load = () => api('/总览').then(setData).catch((e) => setErr(e.message))
-  useEffect(() => { load() }, [])
+  const refreshKey = useRefreshKey()
+  const load = () => { setErr(''); api('/总览').then(setData).catch((e) => setErr(e.message)) }
+  useEffect(() => { load() }, [refreshKey])
   if (err) return <div className="panel err">{err}</div>
   if (!data) return <div className="panel">加载中…</div>
   const d = data.分布 || {}

@@ -8,6 +8,7 @@ import Bags from './pages/Bags'
 import Diverts from './pages/Diverts'
 import Shifts from './pages/Shifts'
 import Settings from './pages/Settings'
+import Audit from './pages/Audit'
 
 const links = [
   ['/', '总览'],
@@ -17,6 +18,7 @@ const links = [
   ['/回流', '错分回流'],
   ['/封袋', '封袋'],
   ['/班次', '班次对账'],
+  ['/审计', '审计'],
   ['/设置', '设置'],
 ]
 
@@ -45,6 +47,7 @@ export default function App() {
           <Route path="/回流" element={<Diverts />} />
           <Route path="/封袋" element={<Bags />} />
           <Route path="/班次" element={<Shifts />} />
+          <Route path="/审计" element={<Audit />} />
           <Route path="/设置" element={<Settings />} />
         </Routes>
       </main>

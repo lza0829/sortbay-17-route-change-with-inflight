@@ -18,13 +18,18 @@ class ChuteIn(BaseModel):
 def list_chutes():
     with db() as conn:
         return rows_to_list(conn.execute(
-            "SELECT c.*, l.name AS 分拣线名 FROM chutes c JOIN lines l ON l.id=c.line_id ORDER BY c.code"
+            """
+            SELECT c.*, l.name AS 分拣线名,
+              (SELECT COUNT(*) FROM scans s
+               WHERE s.chute_id=c.id AND s.status IN ('已路由','已入袋')) AS 在口件数
+            FROM chutes c JOIN lines l ON l.id=c.line_id ORDER BY c.code
+            """
         ).fetchall())
 
 
 @router.post("/口门")
 def create_chute(body: ChuteIn):
-    with db() as conn:
+    with db(write=True) as conn:
         try:
             conn.execute(
                 "INSERT INTO chutes(line_id, code, title, status, soft_cap) VALUES (?, ?, ?, '口门开', ?)",
@@ -44,7 +49,7 @@ def create_chute(body: ChuteIn):
 def set_chute(chute_id: int, 状态: str = Query(...)):
     if 状态 not in ("口门开", "口门闭"):
         raise HTTPException(400, "状态仅允许口门开或口门闭")
-    with db() as conn:
+    with db(write=True) as conn:
         cur = conn.execute("UPDATE chutes SET status=? WHERE id=?", (状态, chute_id))
         if cur.rowcount == 0:
             raise HTTPException(404, "口门不存在")

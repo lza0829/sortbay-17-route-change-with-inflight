@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sqlite3
 from contextlib import contextmanager
+
 from app.config import DB_PATH
 
 SCHEMA = """
@@ -92,33 +93,68 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+-- 改表回执：一次“改路由表”结局的完整、可重放记录（含被强制回流的在途件）。
+CREATE TABLE IF NOT EXISTS route_change_receipts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dest_code TEXT NOT NULL,
+  old_chute_id INTEGER,
+  new_chute_id INTEGER NOT NULL,
+  forced_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  payload TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_scans_dest_status ON scans(dest_code, status);
+CREATE INDEX IF NOT EXISTS idx_route_events_scan ON route_events(scan_id);
 """
 
 
 def connect() -> sqlite3.Connection:
+    # isolation_level=None -> 手动控制事务，才能显式发 BEGIN IMMEDIATE。
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(
+        DB_PATH,
+        check_same_thread=False,
+        timeout=30.0,
+        isolation_level=None,
+    )
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
 @contextmanager
-def db():
+def db(write: bool = False):
+    """事务上下文。
+
+    write=False（默认，读路径）：BEGIN（deferred），不抢写锁。
+    write=True（所有写路径）：BEGIN IMMEDIATE，在事务起点即取得写锁，
+    使改路由表、封袋、回流、路由裁决、入袋等写操作严格串行，
+    不会出现改表与封袋交错导致的“双终态”或半截落库。
+    """
     conn = connect()
     try:
+        conn.execute("BEGIN IMMEDIATE" if write else "BEGIN")
         yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
+        conn.execute("COMMIT")
+    except BaseException:
+        try:
+            conn.execute("ROLLBACK")
+        except sqlite3.Error:
+            pass
         raise
     finally:
         conn.close()
 
 
 def init_db() -> None:
-    with db() as conn:
+    conn = connect()
+    try:
+        # WAL 必须在事务外设置：读不挡写，写者之间仍靠 BEGIN IMMEDIATE 串行。
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.executescript(SCHEMA)
+    finally:
+        conn.close()
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict | None:

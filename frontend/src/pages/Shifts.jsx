@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
+import { bump, useRefreshKey } from '../refresh'
 
 export default function Shifts() {
   const [rows, setRows] = useState([])
   const [rec, setRec] = useState(null)
   const [err, setErr] = useState('')
+  const refreshKey = useRefreshKey()
+
   const load = async () => {
+    setErr('')
     setRows(await api('/班次'))
     setRec(await api('/班次/对账'))
   }
-  useEffect(() => { load().catch((e) => setErr(e.message)) }, [])
+  useEffect(() => { load().catch((e) => setErr(e.message)) }, [refreshKey])
+
   const seal = async (id) => {
-    try { await api(`/班次/${id}/封班`, { method: 'POST' }); load() }
+    try { await api(`/班次/${id}/封班`, { method: 'POST' }); bump(); load() }
     catch (e) { setErr(e.message) }
   }
   return (

@@ -6,7 +6,7 @@ from app.db import db, init_db
 
 def seed_if_empty() -> None:
     init_db()
-    with db() as conn:
+    with db(write=True) as conn:
         n = conn.execute("SELECT COUNT(*) AS c FROM lines").fetchone()["c"]
         if n:
             return

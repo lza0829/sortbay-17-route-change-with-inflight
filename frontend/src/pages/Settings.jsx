@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
+import { bump, useRefreshKey } from '../refresh'
 
 export default function Settings() {
   const [rows, setRows] = useState([])
   const [key, setKey] = useState('回流自动再路由')
   const [val, setVal] = useState('否')
   const [err, setErr] = useState('')
-  const load = () => api('/设置').then(setRows).catch((e) => setErr(e.message))
-  useEffect(() => { load() }, [])
+  const refreshKey = useRefreshKey()
+  const load = () => { setErr(''); api('/设置').then(setRows).catch((e) => setErr(e.message)) }
+  useEffect(() => { load() }, [refreshKey])
   const save = async () => {
     try {
       await api('/设置', { method: 'POST', body: JSON.stringify({ 键: key, 值: val }) })
-      load()
+      bump(); load()
     } catch (e) { setErr(e.message) }
   }
   return (

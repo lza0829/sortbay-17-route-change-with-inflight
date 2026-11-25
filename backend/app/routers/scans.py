@@ -28,7 +28,7 @@ def list_scans(状态: str | None = None):
 
 @router.post("/扫描")
 def create_scan(body: ScanIn):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         shift = current_shift(conn)
         line = None
@@ -63,7 +63,7 @@ def create_scan(body: ScanIn):
 
 @router.post("/扫描/{scan_id}/路由")
 def route_scan(scan_id: int):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         scan = conn.execute("SELECT * FROM scans WHERE id=?", (scan_id,)).fetchone()
         if not scan:

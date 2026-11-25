@@ -20,7 +20,7 @@ def list_settings():
 
 @router.post("/设置")
 def set_setting(body: SettingIn):
-    with db() as conn:
+    with db(write=True) as conn:
         conn.execute(
             "INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
             (body.键, body.值),

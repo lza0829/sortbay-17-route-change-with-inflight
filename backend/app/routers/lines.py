@@ -20,7 +20,7 @@ def list_lines():
 
 @router.post("/分拣线")
 def create_line(body: LineIn):
-    with db() as conn:
+    with db(write=True) as conn:
         try:
             conn.execute(
                 "INSERT INTO lines(name, active) VALUES (?, ?)",
@@ -35,7 +35,7 @@ def create_line(body: LineIn):
 
 @router.post("/分拣线/{line_id}/启停")
 def toggle_line(line_id: int, 启用: bool = Query(...)):
-    with db() as conn:
+    with db(write=True) as conn:
         cur = conn.execute(
             "UPDATE lines SET active=? WHERE id=?",
             (1 if 启用 else 0, line_id),

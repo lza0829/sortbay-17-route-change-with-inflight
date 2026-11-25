@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
+import { bump, useRefreshKey } from '../refresh'
 
 export default function Bags() {
   const [bags, setBags] = useState([])
@@ -10,29 +11,36 @@ export default function Bags() {
   const [scanId, setScanId] = useState('')
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
+  const refreshKey = useRefreshKey()
+
   const load = async () => {
+    setErr('')
     setBags(await api('/封袋'))
     const cs = await api('/口门'); setChutes(cs)
     if (!chuteId && cs[0]) setChuteId(String(cs[0].id))
     const ss = await api('/扫描'); setScans(ss.filter((x) => x.status === '已路由'))
   }
-  useEffect(() => { load().catch((e) => setErr(e.message)) }, [])
+  useEffect(() => { load().catch((e) => setErr(e.message)) }, [refreshKey])
+
   const openBag = async () => {
+    setErr(''); setMsg('')
     try {
       const b = await api('/封袋/开袋', { method: 'POST', body: JSON.stringify({ 口门编号: Number(chuteId) }) })
-      setMsg(`已开袋 ${b.code}`); setBagId(String(b.id)); load()
+      setMsg(`已开袋 ${b.code}`); setBagId(String(b.id)); bump(); load()
     } catch (e) { setErr(e.message) }
   }
   const add = async () => {
+    setErr(''); setMsg('')
     try {
       await api(`/封袋/${bagId}/入袋`, { method: 'POST', body: JSON.stringify({ 扫描编号: Number(scanId) }) })
-      setMsg('入袋成功'); load()
+      setMsg('入袋成功'); bump(); load()
     } catch (e) { setErr(e.message) }
   }
   const seal = async () => {
+    setErr(''); setMsg('')
     try {
       await api(`/封袋/${bagId}/封口`, { method: 'POST' })
-      setMsg('封袋成功'); load()
+      setMsg('封袋成功'); bump(); load()
     } catch (e) { setErr(e.message) }
   }
   return (
@@ -40,6 +48,7 @@ export default function Bags() {
       <h2>封袋</h2>
       {msg && <div className="msg">{msg}</div>}
       {err && <div className="err">{err}</div>}
+      <p className="muted">仅“已路由”件可入袋；若件在改表时被强制回流，会脱离原袋，需按新映射重新路由。</p>
       <div className="row">
         <label>口门
           <select value={chuteId} onChange={(e) => setChuteId(e.target.value)}>

@@ -57,7 +57,7 @@ def reconcile(shift_id: int | None = None):
 
 @router.post("/班次")
 def create_shift(body: ShiftIn):
-    with db() as conn:
+    with db(write=True) as conn:
         open_one = conn.execute("SELECT id FROM shifts WHERE sealed=0").fetchone()
         if open_one:
             raise HTTPException(400, "仍有未封班班次，先封班再开新班")
@@ -78,7 +78,7 @@ def create_shift(body: ShiftIn):
 
 @router.post("/班次/{shift_id}/封班")
 def seal_shift(shift_id: int):
-    with db() as conn:
+    with db(write=True) as conn:
         shift = conn.execute("SELECT * FROM shifts WHERE id=?", (shift_id,)).fetchone()
         if not shift:
             raise HTTPException(404, "班次不存在")

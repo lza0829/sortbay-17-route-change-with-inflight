@@ -22,7 +22,7 @@ def list_batches():
 
 @router.post("/回流批次")
 def create_divert(body: DivertIn):
-    with db() as conn:
+    with db(write=True) as conn:
         require_unsealed(conn)
         shift = current_shift(conn)
         scan = conn.execute("SELECT * FROM scans WHERE id=?", (body.扫描编号,)).fetchone()
@@ -37,7 +37,7 @@ def create_divert(body: DivertIn):
         )
         bid = conn.execute("SELECT id FROM divert_batches WHERE code=?", (code,)).fetchone()["id"]
         conn.execute(
-            "UPDATE scans SET status='错分回流', divert_batch_id=?, bag_id=NULL WHERE id=?",
+            "UPDATE scans SET status='错分回流', divert_batch_id=?, bag_id=NULL, chute_id=NULL WHERE id=?",
             (bid, body.扫描编号),
         )
         if scan["chute_id"]:
